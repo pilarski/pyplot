@@ -74,8 +74,8 @@ class PyTeX(object):
         f.flush()
         f.close()
         os.chdir('/tmp')
-        os.system('pdflatex ' + self.WorkingFolder + '/workfile.tex')
-        os.system('pdflatex ' + self.WorkingFolder + '/workfile.tex')
+        os.system('bash --login -c "pdflatex ' + self.WorkingFolder + '/workfile.tex"')
+        os.system('bash --login -c "pdflatex ' + self.WorkingFolder + '/workfile.tex"')
         if os.path.isfile(self.WorkingFolder + '/workfile.pdf'):
             print self.WorkingFolder + '/workfile.pdf -> ' + self.__pdffilepath
             shutil.copy(self.WorkingFolder + '/workfile.pdf', self.__pdffilepath)
