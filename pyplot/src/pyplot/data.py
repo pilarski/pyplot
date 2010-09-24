@@ -42,7 +42,7 @@ class Data(object):
 
     def plot(self, xaxis, yaxes, **kwargs):
         yaxes = self.__tolist(yaxes)
-        xdata = self.raw[:,xaxis].flat
+        xdata = self.raw[:,xaxis].flat if xaxis else None
         for yaxis in yaxes:
             self._plot(xdata, yaxis, **kwargs)
         # pylab.legend(loc=0)
