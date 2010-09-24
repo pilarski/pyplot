@@ -55,7 +55,10 @@ class DataGroup(object):
     def plot(self, xdata, yaxis,  **kwargs):
         for key, value in self.datas.iteritems():
             value.DrawErrorBar = self.DrawErrorBar
-            value.plot(xdata, yaxis, label=key, **kwargs)
+            if xdata:
+                value.plot(xdata, yaxis, label=key, **kwargs)
+            else:
+                value.plot(yaxis, label=key, **kwargs)
             
     @property
     def legend(self):

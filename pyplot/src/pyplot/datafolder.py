@@ -10,13 +10,16 @@ import pyplot.datafile #@Reimport
 class Datafolder(pyplot.data.Data):
     DrawErrorBar = True
     
-    def __init__(self, folderpath, basename="data", extension="logtxt", labels=None):
+    def __init__(self, folderpath = None, basename="data", extension="logtxt", labels=None, datas = None):
         self.stderr = None
         self.__folderpath = folderpath
         self.__basename = basename
         self.__extension = extension
         self._legend = None
-        self._raw = self._loadraw()
+        if folderpath is not None:
+            self._raw = self._loadraw()
+        else: 
+            self._raw = self._appendraws(datas)
         super(Datafolder, self).__init__(labels=labels)
 
     def __getdatafilename(self, counter):
@@ -51,6 +54,16 @@ class Datafolder(pyplot.data.Data):
         (n, mean, m2) = (None, None, None)
         for filepath in files:
             datafile = pyplot.datafile.Datafile(filepath)
+            if self._legend is None:
+                self._legend = datafile.legend
+            (n, mean, m2) = self.__appendraw(n, mean, m2, datafile.raw)
+        variance = m2 / (n - 1)
+        self.stderr = numpy.sqrt(variance/n)
+        return mean
+    
+    def _appendraws(self, datas):
+        (n, mean, m2) = (None, None, None)
+        for datafile in datas:
             if self._legend is None:
                 self._legend = datafile.legend
             (n, mean, m2) = self.__appendraw(n, mean, m2, datafile.raw)
