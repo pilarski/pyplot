@@ -8,7 +8,8 @@ import gzip
 class Datafile(pyplot.data.Data):
     def __init__(self, filepath, labels=None):
         self.__filepath = filepath
-        print("Loading %s..." % self.__filepath)
+        if self.Verbose:
+            print("Loading %s..." % self.__filepath)
         self._legend = self._readlegend()
         self._raw = self._loadraw()
         super(Datafile, self).__init__(labels=labels)

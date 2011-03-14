@@ -15,12 +15,19 @@ class Datafolder(pyplot.data.Data):
         self.__folderpath = folderpath
         self.__basename = basename
         self.__extension = extension
+        self.__bins = None
         self._legend = None
+        self.sparsePlotFilter = None
+        self._counter = None
         if folderpath is not None:
             self._raw = self._loadraw()
         else: 
             self._raw = self._appendraws(datas)
         super(Datafolder, self).__init__(labels=labels)
+        
+    @property
+    def folderpath(self):
+        return self.__folderpath
 
     def __getdatafilename(self, counter):
         filepath = "%s/%s%02d.%s" % (self.__folderpath, self.__basename, counter, self.__extension)
@@ -32,20 +39,43 @@ class Datafolder(pyplot.data.Data):
 
     def __getfiles(self):
         assert os.path.isdir(self.__folderpath), self.__folderpath
-        counter = 0
-        nextfile = self.__getdatafilename(counter)
+        self._counter = 0
+        nextfile = self.__getdatafilename(self._counter)
         files = []
         while nextfile is not None:
             files.append(nextfile)
-            counter += 1
-            nextfile = self.__getdatafilename(counter)
+            self._counter += 1
+            nextfile = self.__getdatafilename(self._counter)
         return files
+    
+    def binData(self, bins):
+        self.__bins = bins
+        blockSize = self._raw.shape[0] / self.__bins
+        binraw = numpy.matlib.zeros((self.__bins, self._raw.shape[1]))
+        sampledstderr = numpy.matlib.zeros((self.__bins, self._raw.shape[1]))
+        for b in xrange(self.__bins):
+            blockBegin = blockSize * b
+            binraw[b,:] = numpy.mean(self._raw[blockBegin:blockBegin + blockSize,:], axis=0)
+            sampledstderr[b,:] = self.stderr[blockBegin + blockSize / 2,:]
+        self._raw = binraw
+        self.stderr = sampledstderr 
+    
+    @property
+    def nbFiles(self):
+        return self._counter
+    
+    def __extractBlock(self, x, blockSize, i):
+        block = numpy.matlib.zeros((self.__bins, x.shape[1]))
+        for b in xrange(self.__bins):
+            block[b] = x[b * blockSize + i]
+        return block
 
     def __appendraw(self, n, mean, m2, x):
         if n is None:
             n = 0
-            mean = numpy.matlib.zeros(x.shape)
-            m2 = numpy.matlib.zeros(x.shape)
+            shape = x.shape if self.__bins is None else (self.__bins, x.shape[1])
+            mean = numpy.matlib.zeros(shape)
+            m2 = numpy.matlib.zeros(shape)
         n += 1
         delta = x - mean
         mean = mean + delta / n
@@ -67,7 +97,8 @@ class Datafolder(pyplot.data.Data):
                 self._legend = datafile.legend
             (n, mean, m2) = self.__appendraw(n, mean, m2, datafile.raw)
         variance = m2 / (n - 1)
-        self.stderr = numpy.sqrt(variance/n)
+        # Standard error of the mean
+        self.stderr = numpy.sqrt(variance/(n - 1)) / numpy.sqrt(n - 1)
         return mean
     
     def _appendraws(self, datas):
@@ -83,7 +114,8 @@ class Datafolder(pyplot.data.Data):
     def sparsify(self, yaxis, xdata, ydata, yerr, nbErrorBar):
         space = len(xdata) / nbErrorBar
         offset = int(yaxis / self.raw.shape[1] * space)
-        indexes = list(i * space + offset for i in range(0, nbErrorBar))
+        indexes = list(i * space + offset for i in range(0, nbErrorBar) 
+                       if self.sparsePlotFilter is None or self.sparsePlotFilter(i))
         sxdata = list(xdata[i] for i in indexes)
         sydata = list(ydata[i] for i in indexes)
         syerr = list(yerr[i] for i in indexes)
@@ -94,6 +126,14 @@ class Datafolder(pyplot.data.Data):
         if kwargs.has_key('sparseErrorBar') and kwargs['sparseErrorBar'] > 0:
             sparseErrorBar = kwargs['sparseErrorBar']
             del kwargs['sparseErrorBar']
+        elinewidth = 1
+        if kwargs.has_key('elinewidth'):
+            elinewidth = kwargs['elinewidth']
+            del kwargs['elinewidth']
+        capsize = 3
+        if kwargs.has_key('capsize'):
+            capsize = kwargs['capsize']
+            del kwargs['capsize']
         super(Datafolder, self)._plot(xdata, yaxis, **kwargs)
         ydata = list(self.raw[:,yaxis].flat)
         yerr = list(self.stderr[:,yaxis].flat)
@@ -102,7 +142,7 @@ class Datafolder(pyplot.data.Data):
         if sparseErrorBar > 0:
             xdata, ydata, yerr = self.sparsify(yaxis, xdata, ydata, yerr, sparseErrorBar)
         pylab.errorbar(xdata, ydata, yerr = yerr, color = self._color(yaxis), 
-                       marker='None', linestyle='None', elinewidth = 1)
+                       marker='None', linestyle='None', elinewidth = elinewidth, capsize = capsize)
 
 
 def load(path, basename="data", extension='logtxt', **kwargs):
