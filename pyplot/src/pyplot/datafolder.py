@@ -6,9 +6,11 @@ import os.path
 import pylab
 import pyplot.data #@UnusedImport
 import pyplot.datafile #@Reimport
+import sys
 
 class Datafolder(pyplot.data.Data):
     DrawErrorBar = True
+    LoadingHook = None
     
     def __init__(self, folderpath = None, basename="data", extension="logtxt", labels=None, datas = None):
         self.stderr = None
@@ -84,7 +86,9 @@ class Datafolder(pyplot.data.Data):
 
     def _loadraw(self):
         files = self.__getfiles()
-        assert files, "Nothing to load in %s" % os.path.abspath(self.__folderpath)
+        if not files: 
+            print >> sys.stderr, "Nothing to load in %s" % os.path.abspath(self.__folderpath)
+            return None
         (n, mean, m2) = (None, None, None)
         shape = None
         for filepath in files:
@@ -92,13 +96,17 @@ class Datafolder(pyplot.data.Data):
             if shape is None:
                 shape = datafile.raw.shape
             elif shape != datafile.raw.shape:
-                continue
+                print "%s is different from the previous shape %s. Aborting." % (datafile.raw.shape, shape)
+                break
             if self._legend is None:
                 self._legend = datafile.legend
             (n, mean, m2) = self.__appendraw(n, mean, m2, datafile.raw)
-        variance = m2 / (n - 1)
+            if self.LoadingHook:
+                self.LoadingHook(self)
+        variance = m2 / (n - 1) if n > 1 else None
         # Standard error of the mean
-        self.stderr = numpy.sqrt(variance/(n - 1)) / numpy.sqrt(n - 1)
+        self.stderr = (numpy.sqrt(variance/(n - 1)) / numpy.sqrt(n - 1) if n > 1
+                       else numpy.zeros(mean.shape))
         return mean
     
     def _appendraws(self, datas):
@@ -143,6 +151,9 @@ class Datafolder(pyplot.data.Data):
             xdata, ydata, yerr = self.sparsify(yaxis, xdata, ydata, yerr, sparseErrorBar)
         pylab.errorbar(xdata, ydata, yerr = yerr, color = self._color(yaxis), 
                        marker='None', linestyle='None', elinewidth = elinewidth, capsize = capsize)
+
+    def iterrows_stderr(self):
+        return (list(self.stderr[i,:].flat) for i in xrange(0, self.stderr.shape[0]))
 
 
 def load(path, basename="data", extension='logtxt', **kwargs):

@@ -31,6 +31,8 @@ class DataGroup(object):
         for (prefix, isdir) in prefixes:
             data = (pyplot.datafolder.load(self.folderpath + '/' + prefix, **self.__kwargs) if isdir 
                     else pyplot.datafolder.load(self.folderpath, prefix, **self.__kwargs))
+            if data.raw is None:
+                continue
             #if isdir:
             #    data.sparsePlotFilter = (lambda j: j % len(prefixes) == i)
             if self.__legend is None:

@@ -2,6 +2,7 @@
 
 import pylab
 
+# pylint: disable-msg=W0201
 class Data(object):
     Verbose = True
     
@@ -9,8 +10,6 @@ class Data(object):
         self.__labels = {} if labels is None else dict(labels)
         self.__setattr()
         self.__line = {}
-        self._raw = None
-        self._legend = None
         
     def reload(self):
         self._raw = self._loadraw()
@@ -26,6 +25,11 @@ class Data(object):
         result = label
         result = result.replace('[','')
         result = result.replace(']','')
+        result = result.replace('/','')
+        result = result.replace(':','')
+        result = result.replace('.','')
+        if result[0].isdigit():
+            result = "_" + result 
         return result
 
     def __setattr(self):
@@ -65,5 +69,7 @@ class Data(object):
 
     @property
     def legend(self):
-        return None if self._legend is None else list(self._legend)
+        return None if self._legend is None else self._legend
 
+    def indexOf(self, label):
+        return self.legend.index(label)

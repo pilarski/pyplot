@@ -1,27 +1,33 @@
 # -*- coding: utf-8 -*-
 
+import gzip
 import numpy
 import os
 import pyplot.data
-import gzip
+import sys
 
 class Datafile(pyplot.data.Data):
     def __init__(self, filepath, labels=None):
-        self.__filepath = filepath
+        self._filepath = filepath
         if self.Verbose:
-            print("Loading %s..." % self.__filepath)
-        self._legend = self._readlegend()
-        self._raw = self._loadraw()
+            print("Loading %s..." % self._filepath)
+        try:
+            self._legend = self._readlegend()
+            self._raw = self._loadraw()
+        except:
+            print "Unexpected error:", sys.exc_info()[0]
+            self._legend = []
+            self._raw = numpy.zeros((0,0))
         super(Datafile, self).__init__(labels=labels)
-        self.__date = os.stat(self.__filepath).st_mtime
+        self.__date = os.stat(self._filepath).st_mtime
 
     def _loadraw(self):
-        skipped = 0 if self.legend is None else 1
-        return numpy.loadtxt(self.__filepath, skiprows=skipped) #@UndefinedVariable
+        skipped = 0 if not self.legend else 1
+        return numpy.loadtxt(self._filepath, skiprows=skipped) #@UndefinedVariable
 
     def _readlegend(self):
-        openfile = gzip.open if self.__filepath.endswith('.gz') else open
-        f = openfile(self.__filepath, 'r') 
+        openfile = gzip.open if self._filepath.endswith('.gz') else open
+        f = openfile(self._filepath, 'r') 
         line = iter(f).next()
         f.close()
         if line[0].isdigit() or line[0] == '.':
