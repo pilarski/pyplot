@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import pylab
+import numpy
 
 # pylint: disable-msg=W0201
 class Data(object):
@@ -73,3 +74,15 @@ class Data(object):
 
     def indexOf(self, label):
         return self.legend.index(label)
+
+
+    def binDataSingle(self, bins):
+	""" PMP Edit """
+        self.__bins = bins
+        blockSize = self._raw.shape[0] / self.__bins
+        binraw = numpy.matlib.zeros((self.__bins, self._raw.shape[1]))
+        for b in xrange(self.__bins):
+            blockBegin = blockSize * b
+            binraw[b,:] = numpy.mean(self._raw[blockBegin:blockBegin + blockSize,:], axis=0)
+        self._raw = binraw
+
